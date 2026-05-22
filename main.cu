@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <time.h>
 
 #define N 1000
 #define SEED 42
@@ -86,6 +87,7 @@ int main()
 
     print_system(N, A, b);
 
+    clock_t start = clock();
     int iterations = jacobi_cuda(N, A, b, x, max_iter, tol, &final_error);
 
     double elapsed = (double)(clock() - start) / CLOCKS_PER_SEC;
