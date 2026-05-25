@@ -44,22 +44,22 @@ __global__ void error_kernel(double* x_old, double* x_new, double* block_errors,
     double local_error = 0.0;
 
     if (i < n) {
-        local_error = fabs(x_new[i] - x_old[i]);
+        double diff = x_new[i] - x_old[i];
+        local_error = diff * diff;
     }
 
     sdata[thr_id] = local_error;
     __syncthreads();
 
-    // Reducao para encontrar o maximo erro dentro do bloco.
+    // Reducao para SOMAR os erros quadráticos dentro do bloco
     for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
         if (thr_id < stride) {
-            if (sdata[thr_id + stride] > sdata[thr_id]) {
-                sdata[thr_id] = sdata[thr_id + stride];
-            }
+            sdata[thr_id] += sdata[thr_id + stride];
         }
         __syncthreads();
     }
 
+    // A thread 0 salva a soma dos quadrados daquele bloco
     if (thr_id == 0) {
         block_errors[blockIdx.x] = sdata[0];
     }
@@ -74,7 +74,7 @@ int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, d
     double *d_x_new = NULL;
     double *d_block_errors = NULL;
 
-    int iteractions;
+    int iterations;
     double error = 0.0;
 
     const int threads_per_block = 256;
@@ -85,14 +85,12 @@ int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, d
     size_t error_size = (size_t)blocks_per_grid * sizeof(double);
 
     double *h_block_errors = (double*)malloc(error_size);
+
     if (h_block_errors == NULL) {
         fprintf(stderr, "Error: could not allocate host memory for block errors.\n");
         exit(EXIT_FAILURE);
     }
 
-    
-
-    // TODO:
     // cudaMalloc
     CUDA_CHECK(cudaMalloc((void**)&d_A, matrix_size));
     CUDA_CHECK(cudaMalloc((void**)&d_b, vector_size));
@@ -100,13 +98,11 @@ int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, d
     CUDA_CHECK(cudaMalloc((void**)&d_x_new, vector_size));
     CUDA_CHECK(cudaMalloc((void**)&d_block_errors, error_size));
 
-    // TODO:
     // cudaMemcpy
     CUDA_CHECK(cudaMemcpy(d_A, A, matrix_size, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_b, b, vector_size, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_x_old, x, vector_size, cudaMemcpyHostToDevice));
 
-    // TODO:
     // iterations
     for (iterations = 0; iterations < max_iter; iterations++) {
         jacobi_kernel<<<blocks_per_grid, threads_per_block>>>(d_A, d_b, d_x_old, d_x_new, n);
@@ -117,12 +113,15 @@ int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, d
 
         CUDA_CHECK(cudaMemcpy(h_block_errors, d_block_errors, error_size, cudaMemcpyDeviceToHost));
 
-        error = h_block_errors[0];
-        for (int i = 1; i < blocks_per_grid; i++) {
-            if (h_block_errors[i] > error) {
-                error = h_block_errors[i];
-            }
+        double sum_error_squared = 0.0;
+
+        // h_block_errors[i] guarda a soma dos quadrados dos erros daquele bloco.
+        for (int i = 0; i < blocks_per_grid; i++) {
+            sum_error_squared += h_block_errors[i];
         }
+
+        // Norma euclidiana do vetor de erro
+        error = sqrt(sum_error_squared);
 
         if (error < tol) {
             iterations++;
@@ -145,10 +144,6 @@ int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, d
         *final_error = error;
     }
 
-    // TODO:
-    // copy result back
-
-    // TODO:
     // free memory
     CUDA_CHECK(cudaFree(d_A));
     CUDA_CHECK(cudaFree(d_b));
