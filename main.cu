@@ -76,9 +76,19 @@ void print_system(int n, double *A, double *b){
 
 int main()
 {
-    static double A[N * N];
-    static double b[N];
-    static double x[N];
+    double *A = (double*) malloc((size_t) N * N * sizeof(double)); 
+    double *b = (double*) malloc((size_t) N * sizeof(double)); 
+    double *x = (double*) malloc((size_t) N * sizeof(double)); 
+
+    if(A == NULL || b == NULL || x == NULL){
+        printf("Erro ao alocar memoria na CPU.\n");
+
+        free(A);
+        free(b);
+        free(x);
+
+        return 1;
+    }
 
     int max_iter = 5000;
     double tol = 1e-3;
