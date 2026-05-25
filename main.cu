@@ -107,5 +107,9 @@ int main()
     printf("Final error: %e\n", final_error);
     printf("Elapsed time: %f seconds\n", elapsed);
 
+    free(A);
+    free(b);
+    free(x);
+
     return 0;
 }
