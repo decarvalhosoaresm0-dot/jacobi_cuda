@@ -32,7 +32,7 @@ __global__ void jacobi_kernel(double* A, double* b, double* x_old, double* x_new
     }
 }
 
-// Kernel para calcular o maior erro absoluto por bloco (erro_i = |x_new[i] - x_old[i]|)
+// Kernel para calcular para calcular a soma dos quadrados dos erros por bloco.
 // Depois fazemos uma reducao dentro do bloco em memoria compartilhada --> mais rapido que memoria global.
 __global__ void error_kernel(double* x_old, double* x_new, double* block_errors, int n)
 {
@@ -66,7 +66,7 @@ __global__ void error_kernel(double* x_old, double* x_new, double* block_errors,
 }
 
 // Main CUDA function
-int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, double tol, double *final_error){
+int jacobi_cuda(int n, double *A, double *b, double *x, int max_iter, double tol, double *final_error){
     // GPU pointers
     double *d_A = NULL;
     double *d_b = NULL;

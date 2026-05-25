@@ -7,10 +7,10 @@
 #define SEED 42
 
 // function declaration
-int jacobi_cuda(int n, double A[n][n], double b[n], double x[n], int max_iter, double tol, double *final_error);
+int jacobi_cuda(int n, double *A, double *b, double *x, int max_iter, double tol, double *final_error);
 
 // generates a system
-void generate_system(int n, double A[n][n], double b[n], double x[n]){
+void generate_system(int n, double *A, double *b, double *x){
 
     srand(SEED);
 
@@ -20,12 +20,13 @@ void generate_system(int n, double A[n][n], double b[n], double x[n]){
 
         for (int j = 0; j < n; j++) {
             if(i != j){
-                A[i][j] = ((double) rand() / RAND_MAX) * 10.0; // random value between 0 and 10
-                row_sum += fabs(A[i][j]);
+
+                A[i * n + j] = ((double) rand() / RAND_MAX) * 10.0; // random value between 0 and 10
+                row_sum += fabs(A[i * n + j]);
             }
         }
 
-        A[i][i] = row_sum + 10.0;
+        A[i * n +i] = row_sum + 10.0;
 
         b[i] = 1.0;
         x[i] = 0.0;
@@ -33,7 +34,7 @@ void generate_system(int n, double A[n][n], double b[n], double x[n]){
 }
 
 // prints the system with a limit of N <= 5
-void print_system(int n, double A[n][n], double b[n]){
+void print_system(int n, double *A, double *b){
 
     int limit = (n < 5) ? n : 5;
 
@@ -44,7 +45,7 @@ void print_system(int n, double A[n][n], double b[n]){
         // matrix A
         printf("[ ");
         for(int j = 0; j < limit; j++){
-            printf("%6.2f ", A[i][j]);
+            printf("%6.2f ", A[i * n + j]);
         }
 
         if(n > limit) printf("... ");
@@ -75,7 +76,7 @@ void print_system(int n, double A[n][n], double b[n]){
 
 int main()
 {
-    static double A[N][N];
+    static double A[N * N];
     static double b[N];
     static double x[N];
 
