@@ -67,6 +67,12 @@ __global__ void error_kernel(double* x_old, double* x_new, double* block_errors,
     }
 }
 
+// Impressão da tabela de convergência
+int should_print_convergence(int iter){
+    return iter == 0 || iter == 50 || iter == 100 || iter == 200 || iter == 300;
+}
+
+
 // Main CUDA function
 int jacobi_cuda(int n, double *A, double *b, double *x, int max_iter, double tol, double *final_error){
     // GPU pointers
@@ -79,6 +85,7 @@ int jacobi_cuda(int n, double *A, double *b, double *x, int max_iter, double tol
     int iterations;
     double error = 0.0;
 
+    // Number of threads per block
     const int threads_per_block = 256;
     const int blocks_per_grid = (n + threads_per_block - 1) / threads_per_block;
 
@@ -105,6 +112,11 @@ int jacobi_cuda(int n, double *A, double *b, double *x, int max_iter, double tol
     CUDA_CHECK(cudaMemcpy(d_b, b, vector_size, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_x_old, x, vector_size, cudaMemcpyHostToDevice));
 
+    printf("Convergence table:\n");
+    printf("%10s %20s\n", "Iteration", "Error norm");
+    printf("--------------------------------\n");
+
+
     // iterations
     for (iterations = 0; iterations < max_iter; iterations++) {
         jacobi_kernel<<<blocks_per_grid, threads_per_block>>>(d_A, d_b, d_x_old, d_x_new, n);
@@ -124,6 +136,10 @@ int jacobi_cuda(int n, double *A, double *b, double *x, int max_iter, double tol
 
         // Norma euclidiana do vetor de erro
         error = sqrt(sum_error_squared);
+
+        if(should_print_convergence(iterations)){
+            printf("%10d %20.10e\n", iterations, error);
+        }
 
         if (error < tol) {
             iterations++;
